@@ -1,70 +1,60 @@
 """
 ingest.py
-Fetches news articles. Feed URLs are auto-discovered from each site's
-homepage instead of being hand-typed — most news sites declare their RSS
-feed in a hidden <link> tag, even when there's no visible "RSS" button.
+Fetches news articles using Google News' RSS search, which aggregates
+results from many different publishers per topic — no need to maintain
+a list of individual site feed URLs at all.
 """
 
-import requests
-from bs4 import BeautifulSoup
-from urllib.parse import urljoin
 import feedparser
 from sentence_transformers import SentenceTransformer
 import chromadb
 
-# Just homepages now — no more hunting for exact feed URLs by hand.
-NEWS_SITES = {
-    "BBC": "https://www.bbc.com/news",
-    "NPR": "https://www.npr.org",
-    "Reuters": "https://www.reuters.com",
-    "TechCrunch": "https://techcrunch.com",
-}
+# Add or remove topics freely — each one pulls from many different
+# publishers automatically, not just one site per entry.
+NEWS_TOPICS = [
+    "world news",
+    "technology",
+    "business",
+    "science",
+    "health",
+    "sports",
+]
 
 DB_PATH = "./chroma_db"
 COLLECTION_NAME = "news"
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 
-_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; NewsRAGBot/1.0)"}
 
-
-def discover_feed_url(homepage_url):
-    """Look at a site's homepage HTML and find its declared RSS/Atom feed."""
-    try:
-        response = requests.get(homepage_url, headers=_HEADERS, timeout=6)
-        soup = BeautifulSoup(response.text, "html.parser")
-        for link in soup.find_all("link", rel="alternate"):
-            feed_type = link.get("type", "")
-            if "rss" in feed_type or "atom" in feed_type:
-                href = link.get("href")
-                if href:
-                    return urljoin(homepage_url, href)
-    except Exception:
-        pass
-    return None
-
-
-def get_rss_feeds():
-    """Resolve each configured homepage to an actual feed URL."""
-    feeds = {}
-    for name, homepage in NEWS_SITES.items():
-        feed_url = discover_feed_url(homepage)
-        if feed_url:
-            feeds[name] = feed_url
-    return feeds
+def _google_news_rss_url(topic):
+    query = topic.replace(" ", "+")
+    return f"https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en"
 
 
 def fetch_articles():
-    """Pull recent articles from every auto-discovered feed."""
+    """Pull recent articles across all topics, deduplicated by link."""
     articles = []
-    for source, url in get_rss_feeds().items():
-        feed = feedparser.parse(url)
+    seen_links = set()
+
+    for topic in NEWS_TOPICS:
+        feed = feedparser.parse(_google_news_rss_url(topic))
         for entry in feed.entries:
+            link = entry.get("link", "")
+            if not link or link in seen_links:
+                continue
+            seen_links.add(link)
+
+            # Google News includes the original publisher's name per article
+            source_name = "Google News"
+            if hasattr(entry, "source") and hasattr(entry.source, "title"):
+                source_name = entry.source.title
+
             articles.append({
                 "title": entry.get("title", ""),
                 "summary": entry.get("summary", ""),
-                "link": entry.get("link", ""),
-                "source": source,
+                "link": link,
+                "source": source_name,
             })
+
     return articles
 
 
