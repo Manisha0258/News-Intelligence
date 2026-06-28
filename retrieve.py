@@ -35,7 +35,7 @@ def _get_hf_client():
     global _hf_client
     if _hf_client is None:
         token = os.environ.get("HF_TOKEN")
-        _hf_client = InferenceClient(model=LLM_MODEL, token=token, provider="hf-inference")
+        _hf_client = InferenceClient(model=LLM_MODEL, token=token)
     return _hf_client
 
 
