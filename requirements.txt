@@ -1,0 +1,5 @@
+feedparser
+sentence-transformers
+chromadb
+huggingface_hub
+streamlit
