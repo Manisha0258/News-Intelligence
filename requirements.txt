@@ -4,3 +4,5 @@ chromadb
 huggingface_hub
 streamlit
 torchvision
+requests
+beautifulsoup4
