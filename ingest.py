@@ -9,8 +9,6 @@ import feedparser
 from sentence_transformers import SentenceTransformer
 import chromadb
 
-# Add or remove topics freely — each one pulls from many different
-# publishers automatically, not just one site per entry.
 NEWS_TOPICS = [
     "world news",
     "technology",
@@ -31,7 +29,6 @@ def _google_news_rss_url(topic):
 
 
 def fetch_articles():
-    """Pull recent articles across all topics, deduplicated by link."""
     articles = []
     seen_links = set()
 
@@ -43,7 +40,6 @@ def fetch_articles():
                 continue
             seen_links.add(link)
 
-            # Google News includes the original publisher's name per article
             source_name = "Google News"
             if hasattr(entry, "source") and hasattr(entry.source, "title"):
                 source_name = entry.source.title
