@@ -11,8 +11,7 @@ from huggingface_hub import InferenceClient
 
 from ingest import DB_PATH, COLLECTION_NAME, EMBEDDING_MODEL
 
-LLM_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"
-
+LLM_MODEL = "google/gemma-2-2b-it"
 _embedding_model = None
 _db_client = None
 _hf_client = None
