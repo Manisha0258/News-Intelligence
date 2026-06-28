@@ -14,7 +14,7 @@ from ingest import DB_PATH, COLLECTION_NAME, EMBEDDING_MODEL
 LLM_MODEL = "google/gemma-2-2b-it"
 _embedding_model = None
 _db_client = None
-_hf_client = None
+_hf_client = InferenceClient(model=LLM_MODEL, token=token, provider="hf-inference")
 
 
 def _get_embedding_model():
