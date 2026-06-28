@@ -1,56 +1,44 @@
-"""
-ingest.py
-Fetches news articles using Google News' RSS search, which aggregates
-results from many different publishers per topic — no need to maintain
-a list of individual site feed URLs at all.
-"""
-
 import feedparser
 from sentence_transformers import SentenceTransformer
 import chromadb
 
-NEWS_TOPICS = [
-    "world news",
-    "technology",
-    "business",
-    "science",
-    "health",
-    "sports",
-]
+RSS_FEEDS = {
+    "BBC News": "http://feeds.bbci.co.uk/news/rss.xml",
+    "BBC Technology": "http://feeds.bbci.co.uk/news/technology/rss.xml",
+    "BBC Business": "http://feeds.bbci.co.uk/news/business/rss.xml",
+    "Reuters": "https://feeds.reuters.com/reuters/worldNews",
+    "NPR": "https://feeds.npr.org/1001/rss.xml",
+    "TechCrunch": "https://techcrunch.com/feed/",
+    "Al Jazeera": "https://www.aljazeera.com/xml/rss/all.xml",
+    "Guardian World": "https://www.theguardian.com/world/rss",
+    "Guardian Tech": "https://www.theguardian.com/technology/rss",
+    "NASA": "https://www.nasa.gov/rss/dyn/breaking_news.rss",
+}
 
 DB_PATH = "./chroma_db"
 COLLECTION_NAME = "news"
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 
 
-def _google_news_rss_url(topic):
-    query = topic.replace(" ", "+")
-    return f"https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en"
-
-
 def fetch_articles():
     articles = []
     seen_links = set()
-
-    for topic in NEWS_TOPICS:
-        feed = feedparser.parse(_google_news_rss_url(topic))
-        for entry in feed.entries:
-            link = entry.get("link", "")
-            if not link or link in seen_links:
-                continue
-            seen_links.add(link)
-
-            source_name = "Google News"
-            if hasattr(entry, "source") and hasattr(entry.source, "title"):
-                source_name = entry.source.title
-
-            articles.append({
-                "title": entry.get("title", ""),
-                "summary": entry.get("summary", ""),
-                "link": link,
-                "source": source_name,
-            })
-
+    for source, url in RSS_FEEDS.items():
+        try:
+            feed = feedparser.parse(url)
+            for entry in feed.entries:
+                link = entry.get("link", "")
+                if not link or link in seen_links:
+                    continue
+                seen_links.add(link)
+                articles.append({
+                    "title": entry.get("title", ""),
+                    "summary": entry.get("summary", ""),
+                    "link": link,
+                    "source": source,
+                })
+        except Exception:
+            continue
     return articles
 
 
